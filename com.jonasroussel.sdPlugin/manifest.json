@@ -1,0 +1,136 @@
+{
+	"Name": "My Scripts",
+	"Version": "0.1.0.0",
+	"Author": "jonasroussel",
+	"Actions": [
+		{
+			"Name": "Sync PRs to Gather",
+			"UUID": "com.jonasroussel.gather-prs",
+			"Icon": "imgs/actions/github/icon",
+			"Tooltip": "Fetch my review-requested PRs and mirror them into the Gather Inbox.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/github/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Next Deploy PRs",
+			"UUID": "com.jonasroussel.next-deploy",
+			"Icon": "imgs/actions/rocket/icon",
+			"Tooltip": "Summarise my PRs shipping in the next deploy and DM them to me on Slack.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/rocket/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "PRs to Review",
+			"UUID": "com.jonasroussel.review-count",
+			"Icon": "imgs/actions/review/icon",
+			"Tooltip": "Count the open PRs waiting for my review and show it on the key.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/review/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Fix Text",
+			"UUID": "com.jonasroussel.fix-text",
+			"Icon": "imgs/actions/wand/icon",
+			"Tooltip": "Proofread the selected text with Claude and paste it back.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/wand/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Gather: Active",
+			"UUID": "com.jonasroussel.gather-active",
+			"Icon": "imgs/actions/gather-active/icon",
+			"Tooltip": "Set my GatherV2 status to Active.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/gather-active/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Gather: Busy",
+			"UUID": "com.jonasroussel.gather-busy",
+			"Icon": "imgs/actions/gather-busy/icon",
+			"Tooltip": "Set my GatherV2 status to Busy.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/gather-busy/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Gather: Away",
+			"UUID": "com.jonasroussel.gather-away",
+			"Icon": "imgs/actions/gather-away/icon",
+			"Tooltip": "Set my GatherV2 status to Away.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/gather-away/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		}
+	],
+	"Category": "My Scripts",
+	"CategoryIcon": "imgs/plugin/category-icon",
+	"CodePath": "bin/plugin.js",
+	"Description": "Run my personal scripts from the Stream Deck.",
+	"Icon": "imgs/plugin/marketplace",
+	"SDKVersion": 3,
+	"Software": {
+		"MinimumVersion": "7.1"
+	},
+	"OS": [
+		{
+			"Platform": "mac",
+			"MinimumVersion": "12"
+		},
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		}
+	],
+	"Nodejs": {
+		"Version": "24",
+		"Debug": "enabled"
+	},
+	"UUID": "com.jonasroussel"
+}
