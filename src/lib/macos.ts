@@ -43,6 +43,13 @@ export async function activateApp(bundleId: string): Promise<void> {
 	await execFileAsync("/usr/bin/open", ["-b", bundleId]);
 }
 
+/** Shows a macOS notification; clicking it opens {@link openUrl} when given. */
+export async function notify(title: string, subtitle: string, message: string, openUrl?: string): Promise<void> {
+	const args = ["-title", title, "-subtitle", subtitle, "-message", message];
+	if (openUrl) args.push("-open", openUrl);
+	await execFileAsync("/opt/homebrew/bin/terminal-notifier", args, { env: UTF8_ENV });
+}
+
 /** Copies the current selection (Command+C) in the frontmost app. */
 export function copySelection(): Promise<void> {
 	return commandKey("c");

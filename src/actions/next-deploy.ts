@@ -1,7 +1,12 @@
 import { action } from "@elgato/streamdeck";
+import { writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { claude } from "../lib/claude";
 import { gh } from "../lib/gh";
+import { notify } from "../lib/macos";
 import { ScriptAction, ScriptContext } from "../script-action";
 
 const REPOSITORY = "l3mpire/lempire";
@@ -19,9 +24,16 @@ const ROCKET = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -8 40 40" wi
 type SearchItem = { number: number; title: string; html_url: string };
 type SearchResult = { items?: SearchItem[] };
 
+const PAGE_PATH = join(tmpdir(), "next-deploy.html");
+
+function escapeHtml(text: string): string {
+	return text.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+}
+
 /**
- * Summarises which of my PRs will ship in the next deploy, then DMs it to me on
- * Slack. "Next deploy" = my PRs merged after the last deploy notification in the
+ * Summarises which of my PRs will ship in the next deploy, then shows it as a
+ * macOS notification that opens an HTML page with the PR links when clicked.
+ * "Next deploy" = my PRs merged after the last deploy notification in the
  * #deploys channel (only readable via Claude's Slack MCP connector).
  */
 @action({ UUID: "com.jonasroussel.next-deploy" })
@@ -47,19 +59,30 @@ export class NextDeploy extends ScriptAction {
 		const prs = search.items ?? [];
 		ctx.log(`incoming PRs: ${prs.length}`);
 
-		// 3. Compose the summary.
+		// 3. Write the PR list as a page, and notify with a link to it.
 		const when = new Date(iso).toLocaleString();
-		const message = prs.length
-			? `:rocket: *Incoming in the next deploy* — ${prs.length} PR(s) merged since the last deploy (${when}):\n` +
-				prs.map((pr) => `• <${pr.html_url}|#${pr.number}> ${pr.title}`).join("\n")
-			: `:white_check_mark: Nothing new to deploy since the last deploy (${when}).`;
+		const summary = prs.length ? `${prs.length} PR(s) merged since ${when}` : `Nothing new since ${when}`;
+		if (!prs.length) {
+			await notify("Next deploy", summary, "Nothing to deploy.");
+			return;
+		}
 
-		// 4. DM it to myself on Slack.
-		await claude(
-			`Using the Slack MCP tools, send the following message as a direct message to myself ` +
-				`(the authenticated Slack user's own DM). Send it verbatim, exactly as-is, with no commentary ` +
-				`or extra formatting:\n\n${message}`,
-			{ model: CLAUDE_MODEL },
+		const items = prs
+			.map((pr) => `<li><a href="${escapeHtml(pr.html_url)}">#${pr.number}</a> ${escapeHtml(pr.title)}</li>`)
+			.join("\n");
+		await writeFile(
+			PAGE_PATH,
+			`<!doctype html><meta charset="utf-8"><title>Next deploy</title>
+<style>:root{color-scheme:light dark}body{font:16px/1.6 -apple-system,sans-serif;max-width:720px;margin:48px auto;padding:0 24px}</style>
+<h1>Next deploy</h1><p>${escapeHtml(summary)}</p><ul>
+${items}
+</ul>`,
+		);
+		await notify(
+			"Next deploy",
+			summary,
+			prs.map((pr) => `#${pr.number} ${pr.title}`).join("\n"),
+			pathToFileURL(PAGE_PATH).href,
 		);
 	}
 }
