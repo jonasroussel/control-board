@@ -4,25 +4,10 @@
 	"Author": "jonasroussel",
 	"Actions": [
 		{
-			"Name": "Sync PRs to Gather",
-			"UUID": "com.jonasroussel.gather-prs",
-			"Icon": "imgs/actions/github/icon",
-			"Tooltip": "Fetch my review-requested PRs and mirror them into the Gather Inbox.",
-			"Controllers": [
-				"Keypad"
-			],
-			"States": [
-				{
-					"Image": "imgs/actions/github/key",
-					"TitleAlignment": "middle"
-				}
-			]
-		},
-		{
 			"Name": "Next Deploy PRs",
 			"UUID": "com.jonasroussel.next-deploy",
 			"Icon": "imgs/actions/rocket/icon",
-			"Tooltip": "Summarise my PRs shipping in the next deploy and DM them to me on Slack.",
+			"Tooltip": "Summarise my PRs shipping in the next deploy in a macOS notification.",
 			"Controllers": [
 				"Keypad"
 			],
@@ -44,6 +29,21 @@
 			"States": [
 				{
 					"Image": "imgs/actions/review/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Notif Errors to Fix",
+			"UUID": "com.jonasroussel.notif-errors",
+			"Icon": "imgs/actions/bug/icon",
+			"Tooltip": "Count open enrichment errors and slow queries without owner on the squad dashboard.",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/bug/key",
 					"TitleAlignment": "middle"
 				}
 			]

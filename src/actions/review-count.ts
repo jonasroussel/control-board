@@ -1,5 +1,6 @@
 import { action, type KeyDownEvent } from "@elgato/streamdeck";
 
+import { countImage } from "../lib/count-image";
 import { gh } from "../lib/gh";
 import { ScriptAction, type ScriptContext } from "../script-action";
 
@@ -13,27 +14,19 @@ const EYE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -6 36 36" width
 	<circle cx="12" cy="12" r="3"/>
 </svg>`;
 
-/** Key image for a review count: the eye until first run, then the number. */
-function countImage(count?: number): string {
-	if (count === undefined) return EYE;
-	const color = count >= 5 ? "#f85149" : count > 0 ? "#f0883e" : "#3fb950";
-	const size = count >= 100 ? 54 : count >= 10 ? 78 : 94;
-	const y = 72 + size * 0.34; // baseline for vertical centring (renderer-agnostic)
-	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144" width="144" height="144"><text x="72" y="${y.toFixed(0)}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="${size}" fill="${color}">${count}</text></svg>`;
-}
-
 type ReviewSettings = { count?: number };
 type GhUser = { login?: string };
 type Pull = {
+	draft?: boolean;
 	requested_reviewers?: GhUser[] | null;
 	requested_teams?: { slug?: string }[] | null;
 	assignees?: GhUser[] | null;
 };
 
 /**
- * Counts open PRs I need to review and shows the number on the key. A PR counts
- * when I'm a requested reviewer, or when it's assigned to {@link ASSIGNEE} and
- * the {@link REVIEWER_TEAM} team's review is requested.
+ * Counts open, non-draft PRs I need to review and shows the number on the key.
+ * A PR counts when I'm a requested reviewer, or when it's assigned to
+ * {@link ASSIGNEE} and the {@link REVIEWER_TEAM} team's review is requested.
  */
 @action({ UUID: "com.jonasroussel.review-count" })
 export class ReviewCount extends ScriptAction<ReviewSettings> {
@@ -46,7 +39,9 @@ export class ReviewCount extends ScriptAction<ReviewSettings> {
 	}
 
 	protected override idleImage(settings: ReviewSettings): string {
-		return countImage(settings.count);
+		const { count } = settings;
+		if (count === undefined) return EYE;
+		return countImage(count, count >= 5 ? "#f85149" : count > 0 ? "#f0883e" : "#3fb950");
 	}
 
 	protected override async run(ctx: ScriptContext, ev: KeyDownEvent<ReviewSettings>): Promise<void> {
@@ -55,6 +50,7 @@ export class ReviewCount extends ScriptAction<ReviewSettings> {
 
 		let count = 0;
 		for (const pr of pulls) {
+			if (pr.draft) continue;
 			const iAmReviewer = (pr.requested_reviewers ?? []).some((user) => (user.login ?? "").toLowerCase() === me);
 			const assignedToTarget = (pr.assignees ?? []).some((user) => (user.login ?? "").toLowerCase() === ASSIGNEE);
 			const teamRequested = (pr.requested_teams ?? []).some((team) => team.slug === REVIEWER_TEAM);

@@ -1,11 +1,8 @@
 import { action } from "@elgato/streamdeck";
-import { writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 
 import { claude } from "../lib/claude";
 import { gh } from "../lib/gh";
+import { writeLinksPage } from "../lib/links-page";
 import { notify } from "../lib/macos";
 import { ScriptAction, ScriptContext } from "../script-action";
 
@@ -23,12 +20,6 @@ const ROCKET = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -8 40 40" wi
 
 type SearchItem = { number: number; title: string; html_url: string };
 type SearchResult = { items?: SearchItem[] };
-
-const PAGE_PATH = join(tmpdir(), "next-deploy.html");
-
-function escapeHtml(text: string): string {
-	return text.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
-}
 
 /**
  * Summarises which of my PRs will ship in the next deploy, then shows it as a
@@ -67,22 +58,12 @@ export class NextDeploy extends ScriptAction {
 			return;
 		}
 
-		const items = prs
-			.map((pr) => `<li><a href="${escapeHtml(pr.html_url)}">#${pr.number}</a> ${escapeHtml(pr.title)}</li>`)
-			.join("\n");
-		await writeFile(
-			PAGE_PATH,
-			`<!doctype html><meta charset="utf-8"><title>Next deploy</title>
-<style>:root{color-scheme:light dark}body{font:16px/1.6 -apple-system,sans-serif;max-width:720px;margin:48px auto;padding:0 24px}</style>
-<h1>Next deploy</h1><p>${escapeHtml(summary)}</p><ul>
-${items}
-</ul>`,
-		);
-		await notify(
+		const pageUrl = await writeLinksPage(
+			"next-deploy",
 			"Next deploy",
 			summary,
-			prs.map((pr) => `#${pr.number} ${pr.title}`).join("\n"),
-			pathToFileURL(PAGE_PATH).href,
+			prs.map((pr) => ({ url: pr.html_url, label: `#${pr.number}`, text: pr.title })),
 		);
+		await notify("Next deploy", summary, prs.map((pr) => `#${pr.number} ${pr.title}`).join("\n"), pageUrl);
 	}
 }
