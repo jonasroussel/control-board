@@ -13,38 +13,50 @@ const STORIES_SOURCE = "collection://02b290f7-dd2a-4543-bb29-970f34835fc8";
 
 type Filter = Record<string, unknown>;
 
-function property(name: string, propertyType: string, operator: string, value?: string): Filter {
+function property(name: string, propertyType: string, operator: string, value?: Filter): Filter {
 	const filter: Filter = { type: "property", property: name, propertyType, operator };
-	if (value !== undefined) filter.value = { type: "exact", value };
+	if (value !== undefined) filter.value = value;
 	return filter;
+}
+
+function exact(value: string): Filter {
+	return { type: "exact", value };
 }
 
 function group(operator: "and" | "or", filters: Filter[]): Filter {
 	return { type: "group", operator, filters };
 }
 
-// Open "Squad Error Events" of the enrichment squad (tagged Lemrich in practice) with no owner.
+/** {@link name} is empty or contains me (the Notion user Claude's connector is logged in as). */
+function unownedOrMine(name: string): Filter {
+	return group("or", [
+		property(name, "person", "is_empty"),
+		property(name, "person", "person_contains", { type: "relative", value: "me" }),
+	]);
+}
+
+// Open "Squad Error Events" of the enrichment squad (tagged Lemrich in practice), unowned or mine.
 const ERRORS_FILTER = group("and", [
 	group("or", [
-		property("Squad", "multi_select", "enum_contains", "Lemrich"),
-		property("Squad", "multi_select", "enum_contains", "Enrichment"),
+		property("Squad", "multi_select", "enum_contains", exact("Lemrich")),
+		property("Squad", "multi_select", "enum_contains", exact("Enrichment")),
 	]),
-	property("Lifecycle", "select", "enum_is_not", "Done"),
-	property("Lifecycle", "select", "enum_is_not", "Rotten"),
-	property("Owner", "person", "is_empty"),
+	property("Lifecycle", "select", "enum_is_not", exact("Done")),
+	property("Lifecycle", "select", "enum_is_not", exact("Rotten")),
+	unownedOrMine("Owner"),
 ]);
 
-// Open enrichment/lemrich "Slow queries" stories with no dev.
+// Open enrichment/lemrich "Slow queries" stories with no dev, or with me as dev.
 const SLOW_QUERIES_FILTER = group("and", [
-	property("Title", "title", "string_contains", "Slow query on"),
+	property("Title", "title", "string_contains", exact("Slow query on")),
 	group("or", [
-		property("Title", "title", "string_contains", "enrichment"),
-		property("Title", "title", "string_contains", "lemrich"),
+		property("Title", "title", "string_contains", exact("enrichment")),
+		property("Title", "title", "string_contains", exact("lemrich")),
 	]),
 	...["✅ Success", "❌ Failed", "🍅 Rotten", "Archived Success"].map((lifecycle) =>
-		property("Lifecycle", "select", "enum_is_not", lifecycle),
+		property("Lifecycle", "select", "enum_is_not", exact(lifecycle)),
 	),
-	property("Dev", "person", "is_empty"),
+	unownedOrMine("Dev"),
 ]);
 
 const PROMPT = `Using the Notion MCP tool notion-query-data-sources (read-only, never modify anything), run exactly these two queries in "rows" mode with limit 100, following has_more until all rows are fetched. Do not add or drop conditions.
@@ -72,7 +84,7 @@ type NotifErrorsSettings = { count?: number };
 
 /**
  * Checks the squad dashboard in Notion for open enrichment dev-notif errors
- * (Squad Error Events and Slow queries) that nobody owns yet. Shows the count
+ * (Squad Error Events and Slow queries) that nobody owns yet or that I own. Shows the count
  * on the key (the bug icon when there are none); when above zero, a
  * notification opens a page with the links.
  */
@@ -94,7 +106,7 @@ export class NotifErrors extends ScriptAction<NotifErrorsSettings> {
 		const raw = await claude(PROMPT, { model: CLAUDE_MODEL });
 		const { errors, slowQueries } = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)) as QueryResult;
 		const count = errors.length + slowQueries.length;
-		ctx.log(`unowned errors: ${errors.length}, slow queries: ${slowQueries.length}`);
+		ctx.log(`errors: ${errors.length}, slow queries: ${slowQueries.length}`);
 		await ev.action.setSettings({ count });
 		if (!count) {
 			await ev.action.showOk(); // the key stays on the bug icon, so confirm the check ran
@@ -105,7 +117,7 @@ export class NotifErrors extends ScriptAction<NotifErrorsSettings> {
 			...errors.map((row) => ({ url: row.url, label: "Error", text: row.title })),
 			...slowQueries.map((row) => ({ url: row.url, label: "Slow query", text: row.title })),
 		];
-		const summary = `${errors.length} error(s), ${slowQueries.length} slow query(ies) without owner`;
+		const summary = `${errors.length} error(s), ${slowQueries.length} slow query(ies) to fix`;
 		const pageUrl = await writeLinksPage("notif-errors", "Notif errors to fix", summary, links);
 		await notify("Notif errors to fix", summary, links.map((link) => link.text).join("\n"), pageUrl);
 	}
