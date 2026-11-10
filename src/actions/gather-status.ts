@@ -1,6 +1,6 @@
 import { action } from "@elgato/streamdeck";
 
-import { activateApp, commandKey, frontmostApp, sleep } from "../lib/macos";
+import { activateApp, commandKey, focusApp, frontmostApp, sleep } from "../lib/macos";
 import { ScriptAction, type ScriptContext } from "../script-action";
 
 const GATHER_BUNDLE = "com.gather.GatherV2";
@@ -36,14 +36,12 @@ abstract class GatherStatusButton extends ScriptAction {
 	protected override async run(ctx: ScriptContext): Promise<void> {
 		const previous = await frontmostApp();
 
-		await activateApp(GATHER_BUNDLE);
-		await sleep(250);
-		if ((await frontmostApp()) !== GATHER_BUNDLE) {
-			throw new Error("Could not focus GatherV2 (is it running?).");
-		}
+		if (!(await focusApp(GATHER_BUNDLE))) throw new Error("Could not focus GatherV2 (is it running?).");
+		// The Electron webview can take keyboard focus slightly after the window.
+		await sleep(100);
 
 		await commandKey(SHORTCUT[this.status]);
-		await sleep(120);
+		await sleep(150);
 		ctx.log(`status -> ${this.status}`);
 
 		// Return focus to whatever app was in front, best effort.

@@ -43,6 +43,28 @@ export async function activateApp(bundleId: string): Promise<void> {
 	await execFileAsync("/usr/bin/open", ["-b", bundleId]);
 }
 
+/** Activates the app and waits until it is frontmost with a focused window; false on timeout. */
+export async function focusApp(bundleId: string, timeoutMs = 2000): Promise<boolean> {
+	await activateApp(bundleId);
+	const script = [
+		"try",
+		'tell application "System Events"',
+		`set p to first application process whose bundle identifier is "${bundleId}"`,
+		'return (frontmost of p) and ((value of attribute "AXFocusedWindow" of p) is not missing value)',
+		"end tell",
+		"on error",
+		"return false",
+		"end try",
+	].flatMap((line) => ["-e", line]);
+	const deadline = Date.now() + timeoutMs;
+	do {
+		const { stdout } = await execFileAsync("/usr/bin/osascript", script);
+		if (stdout.trim() === "true") return true;
+		await sleep(50);
+	} while (Date.now() < deadline);
+	return false;
+}
+
 /** Shows a macOS notification; clicking it opens {@link openUrl} when given. */
 export async function notify(title: string, subtitle: string, message: string, openUrl?: string): Promise<void> {
 	const args = ["-title", title, "-subtitle", subtitle, "-message", message];
